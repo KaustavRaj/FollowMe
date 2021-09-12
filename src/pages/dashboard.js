@@ -69,6 +69,37 @@ const ScrollContent = ({ children }) => {
   );
 };
 
+function SectionCard(props) {
+  return (
+    <Stack spacing={4}>
+      <HStack spacing={4}>
+        {props.icon && (
+          <Box
+            bg="white"
+            paddingX="6px"
+            rounded="lg"
+            border="2px"
+            borderColor="purple.500"
+          >
+            <Icon as={props.icon} color="purple.500" w={3} h={3} />
+          </Box>
+        )}
+        <Text as="strong" fontSize={18}>
+          {props.title}
+        </Text>
+      </HStack>
+      <Box
+        bg={props.noBg ? "transparent" : "white"}
+        py="4"
+        px="6"
+        color="gray.600"
+      >
+        {props.children}
+      </Box>
+    </Stack>
+  );
+}
+
 function CustomLink({ linkData }) {
   const { dashboard, removeCustomLink, updateCustomLink, updateLinkPositions } =
     useDashboard();
@@ -178,6 +209,185 @@ function CustomLink({ linkData }) {
         existing={linkData}
       />
     </Flex>
+  );
+}
+
+function AppearanceSection() {
+  const {
+    dashboard,
+    updateBaseTheme,
+    updateCustomButton,
+    updateBackgroundColor,
+    updateTextColor,
+  } = useDashboard();
+  const { isOpen, onClose, onOpen } = useDisclosure();
+  const [bgColorPickerOpen, setBgColorPickerOpen] = useBoolean(false);
+
+  const bgColor = () => {
+    let custom = dashboard.theme.customizations;
+    if (custom && custom.backgroundColor) {
+      return custom.backgroundColor;
+    }
+    return;
+  };
+
+  const textColor = () => {
+    let theme = combineThemeWithCustomizations(dashboard);
+    return theme.background.textColor;
+  };
+
+  const bgImage = (theme) =>
+    theme.background.coverType === "gradient"
+      ? theme.background.gradient
+      : `url('${theme.background.image}')`;
+
+  const onSaveColor = (color) => {
+    console.log(
+      `color : ${
+        typeof color === "object" ? color.hex : color
+      }, bgColorPickerOpen : ${bgColorPickerOpen}`
+    );
+
+    if (color) {
+      if (bgColorPickerOpen && color.hex !== bgColor()) {
+        updateBackgroundColor(color.hex || null);
+      } else if (!bgColorPickerOpen && color.hex !== textColor()) {
+        updateTextColor(color.hex || null);
+      }
+    }
+
+    onClose();
+  };
+
+  const onOpenPicker = (isBgColor) => {
+    if (isBgColor) {
+      setBgColorPickerOpen.on();
+    } else {
+      setBgColorPickerOpen.off();
+    }
+
+    onOpen();
+  };
+
+  const DisplayButton = ({ id, theme }) => (
+    <Box
+      w="full"
+      h="10"
+      border="2px"
+      borderColor={theme.borderColor}
+      bg={theme.bg}
+      rounded={theme.rounded}
+      cursor="pointer"
+      style={
+        theme.shadow
+          ? {
+              boxShadow: `${theme.shadow.shadowPos} rgba(0, 0, 0, 0.36)`,
+            }
+          : null
+      }
+      onClick={() => updateCustomButton(id)}
+    >
+      {"    "}
+    </Box>
+  );
+
+  const DisplayTheme = ({ name, theme, onlyBg }) => (
+    <Flex
+      flexDir="column"
+      h="64"
+      cursor="pointer"
+      onClick={() => updateBaseTheme(name)}
+    >
+      <Center
+        w="full"
+        p="4"
+        rounded="md"
+        bgImg={bgImage(theme)}
+        flex="1"
+        border="1px"
+        borderColor="gray.300"
+      >
+        <Stack w="full" spacing="2">
+          {/* This are for buttons inside the custom themes */}
+          {!onlyBg &&
+            [1, 2, 3].map((value) => (
+              <Box
+                key={`Button-${name}-${value}`}
+                w="full"
+                h="6"
+                border="2px"
+                borderColor={theme.link.borderColor}
+                color={theme.link.textColor}
+                bg={theme.link.backgroundColor}
+                rounded={theme.link.roundCorners}
+                cursor="pointer"
+                _hover={{
+                  bg: theme.link.onHover.backgroundColor,
+                  color: theme.link.onHover.textColor,
+                }}
+              >
+                {"    "}
+              </Box>
+            ))}
+        </Stack>
+      </Center>
+      <Text textAlign="center">{name}</Text>
+    </Flex>
+  );
+
+  return (
+    <ScrollContent>
+      <Box px="4" py="8">
+        <List spacing="8">
+          <ListItem>
+            <SectionCard title="Themes">
+              <SimpleGrid spacing={6} columns={{ base: 2, lg: 3 }}>
+                {Object.entries(defaults.themes).map(([name, theme]) => (
+                  <DisplayTheme key={name} name={name} theme={theme} />
+                ))}
+              </SimpleGrid>
+
+              <ColorPicker
+                bgColorPickerOpen={bgColorPickerOpen}
+                isOpen={isOpen}
+                onSave={onSaveColor}
+                initColor={bgColor()}
+              />
+            </SectionCard>
+          </ListItem>
+
+          <ListItem>
+            <SectionCard title="Buttons">
+              <Stack spacing="6">
+                {Object.entries(defaults.buttons).map(([title, rowButtons]) => (
+                  <Stack spacing="2" key={`rowButtons_${title}`}>
+                    <Text>{title}</Text>
+                    <SimpleGrid spacing={6} columns={{ base: 2, lg: 3 }}>
+                      {rowButtons.map((customButton) => (
+                        <DisplayButton
+                          id={customButton.id}
+                          key={customButton.id}
+                          theme={{
+                            borderColor: customButton.bg
+                              ? "transparent"
+                              : "blackAlpha.500",
+                            bg: customButton.bg
+                              ? "blackAlpha.500"
+                              : "transparent",
+                            rounded: customButton.border,
+                            shadow: customButton.shadow,
+                          }}
+                        />
+                      ))}
+                    </SimpleGrid>
+                  </Stack>
+                ))}
+              </Stack>
+            </SectionCard>
+          </ListItem>
+        </List>
+      </Box>
+    </ScrollContent>
   );
 }
 
